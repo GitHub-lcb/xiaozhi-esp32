@@ -8,6 +8,13 @@
             "sdkconfig_append": [
                 "CONFIG_USE_DEVICE_AEC=y"
             ]
+        },
+        {
+            "name": "lichuang-dev-emote",
+            "sdkconfig_append": [
+                "CONFIG_USE_DEVICE_AEC=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y"
+            ]
         }
     ]
 }
