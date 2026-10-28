@@ -11,15 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       board:
-        description: Board directory under main/boards, for example bread-compact-wifi
+        description: Board directory under main/boards, for example bread-compact-wifi-lcd
         type: string
         required: true
-        default: bread-compact-wifi
+        default: bread-compact-wifi-lcd
       name:
         description: Variant name from that board config.json builds[].name
         type: string
         required: true
-        default: bread-compact-wifi
+        default: bread-compact-wifi-lcd-emote
       language:
         description: UI locale such as zh-CN or en-US; empty keeps the build default
         type: string
@@ -51,7 +51,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build ${{ inputs.name || 'bread-compact-wifi' }}
+    name: Build ${{ inputs.name || 'bread-compact-wifi-lcd-emote' }}
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:release-v6.1
@@ -70,9 +70,9 @@ jobs:
           source "$IDF_PATH/export.sh"
           idf.py --version
           # workflow_dispatch supplies the values; a push run falls back to the
-          # fork's own board so the firmware is rebuilt without any clicking.
-          BOARD="${BOARD:-bread-compact-wifi}"
-          VARIANT="${VARIANT:-bread-compact-wifi}"
+          # fork's own target so the firmware is rebuilt without any clicking.
+          BOARD="${BOARD:-bread-compact-wifi-lcd}"
+          VARIANT="${VARIANT:-bread-compact-wifi-lcd-emote}"
           LANGUAGE="${LANGUAGE:-zh-CN}"
           echo "board=$BOARD variant=$VARIANT language=$LANGUAGE wake_word=$WAKE_WORD"
           OPTIONS=()
@@ -83,7 +83,7 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi' }}_${{ github.sha }}
+          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi-lcd-emote' }}_${{ github.sha }}
           path: |
             build/merged-binary.bin
             build/xiaozhi.bin

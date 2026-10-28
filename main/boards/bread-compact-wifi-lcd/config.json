@@ -19,6 +19,14 @@
             "sdkconfig_append": [
                 "CONFIG_LCD_ST7789_240X280=y"
             ]
+        },
+        {
+            "name": "bread-compact-wifi-lcd-emote",
+            "sdkconfig_append": [
+                "CONFIG_LCD_CUSTOM=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32"
+            ]
         }
     ]
 }

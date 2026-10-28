@@ -268,12 +268,14 @@
 #define DISPLAY_SPI_MODE 0
 #endif
 
+// Emote 资源包只有 320x240 与 360x360 两种分辨率，CUSTOM 固定为 320x240 横屏
+// （240x320 面板旋转 90 度），供 emote 变体使用。
 #ifdef CONFIG_LCD_CUSTOM
-#define DISPLAY_WIDTH   240
-#define DISPLAY_HEIGHT  320
+#define DISPLAY_WIDTH   320
+#define DISPLAY_HEIGHT  240
 #define DISPLAY_MIRROR_X false
 #define DISPLAY_MIRROR_Y false
-#define DISPLAY_SWAP_XY false
+#define DISPLAY_SWAP_XY true
 #define DISPLAY_INVERT_COLOR    true
 #define DISPLAY_RGB_ORDER  LCD_RGB_ELEMENT_ORDER_RGB
 #define DISPLAY_OFFSET_X  0
