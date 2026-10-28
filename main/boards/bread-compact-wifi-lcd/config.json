@@ -13,6 +13,12 @@
             "sdkconfig_append": [
                 "CONFIG_LCD_GC9A01_240X240=y"
             ]
+        },
+        {
+            "name": "bread-compact-wifi-lcd-st7789-240x280",
+            "sdkconfig_append": [
+                "CONFIG_LCD_ST7789_240X280=y"
+            ]
         }
     ]
 }
