@@ -1790,6 +1790,51 @@ class CliTests(unittest.TestCase):
         )
 
 
+class SelectionFilterTests(unittest.TestCase):
+    """--targets/--boards narrow the 'all' matrix and never change the default."""
+
+    def setUp(self):
+        self.variants = [
+            {"board": "bread-compact-wifi", "name": "bread-compact-wifi",
+             "full_name": "bread-compact-wifi", "target": "esp32s3"},
+            {"board": "bread-compact-esp32", "name": "bread-compact-esp32",
+             "full_name": "bread-compact-esp32", "target": "esp32"},
+            {"board": "m5stack/core-s3", "name": "m5stack-core-s3",
+             "full_name": "m5stack-core-s3", "target": "esp32s3"},
+        ]
+
+    def build_all(self, argv):
+        with (
+            mock.patch.object(build, "_detect_idf_version", return_value=(6, 1, 0)),
+            mock.patch.object(build, "_board_type_exists", return_value=True),
+            mock.patch.object(build, "_collect_variants", return_value=self.variants),
+            mock.patch.object(build, "build_board") as build_board,
+        ):
+            build.main(argv)
+        return [call.args[0] for call in build_board.call_args_list]
+
+    def test_default_all_still_builds_every_variant(self):
+        self.assertEqual(self.build_all(["all"]),
+                         ["bread-compact-wifi", "bread-compact-esp32", "m5stack/core-s3"])
+
+    def test_target_filter_keeps_only_matching_chips(self):
+        self.assertEqual(self.build_all(["all", "--targets", "esp32s3"]),
+                         ["bread-compact-wifi", "m5stack/core-s3"])
+
+    def test_board_filter_keeps_only_named_directories(self):
+        self.assertEqual(self.build_all(["all", "--boards", "m5stack/core-s3"]),
+                         ["m5stack/core-s3"])
+
+    def test_unknown_and_inapplicable_filters_are_rejected(self):
+        for argv in (
+            ["all", "--targets", "esp32nope"],
+            ["all", "--boards", "nope/nope"],
+            ["bread-compact-wifi", "--targets", "esp32s3"],
+        ):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit):
+                self.build_all(argv)
+
+
 class BoardSourceTests(unittest.TestCase):
     def test_relative_board_includes_exist(self):
         missing = []

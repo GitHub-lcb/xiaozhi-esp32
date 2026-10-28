@@ -8,6 +8,16 @@ on:
         type: boolean
         required: true
         default: true
+      targets:
+        description: Only build these chips (comma separated, e.g. esp32s3). Empty builds every variant.
+        type: string
+        required: false
+        default: ''
+      boards:
+        description: Only build these board directories (comma separated, e.g. m5stack/core-s3). Empty builds every variant.
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -19,7 +29,7 @@ concurrency:
 
 jobs:
   prepare:
-    name: Validate release and select all variants
+    name: Validate release and select variants
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.prepare.outputs.version }}
@@ -46,12 +56,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TARGETS: ${{ inputs.targets }}
+          RELEASE_BOARDS: ${{ inputs.boards }}
         run: |
+          OPTIONS=()
+          if [[ -n "$RELEASE_TARGETS" ]]; then OPTIONS+=(--targets "$RELEASE_TARGETS"); fi
+          if [[ -n "$RELEASE_BOARDS" ]]; then OPTIONS+=(--boards "$RELEASE_BOARDS"); fi
           python3 scripts/release.py prepare \
             --idf-version 6.1.0 \
             --source-sha "$RELEASE_SHA" \
             --repository "$GITHUB_REPOSITORY" \
-            --output-dir "$RUNNER_TEMP/release-metadata" >> "$GITHUB_OUTPUT"
+            --output-dir "$RUNNER_TEMP/release-metadata" \
+            "${OPTIONS[@]}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v7
         with:

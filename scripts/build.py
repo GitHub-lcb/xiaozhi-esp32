@@ -1044,6 +1044,36 @@ def _load_representative_variants(
     return selected
 
 
+def _split_filter_values(values: list[str]) -> list[str]:
+    """Flatten repeatable, comma separated CLI filters and drop duplicates."""
+    flattened: list[str] = []
+    for value in values:
+        for item in value.split(","):
+            item = item.strip()
+            if item and item not in flattened:
+                flattened.append(item)
+    return flattened
+
+
+def _filter_variants(
+    variants: list[dict[str, Any]],
+    targets: list[str],
+    boards: list[str],
+) -> list[dict[str, Any]]:
+    """Restrict an 'all' build matrix to the requested chips and board directories.
+
+    Empty filters keep every variant, so the default 'all' build is unchanged.
+    """
+    if not targets and not boards:
+        return variants
+    return [
+        variant
+        for variant in variants
+        if (not targets or variant["target"] in targets)
+        and (not boards or variant["board"] in boards)
+    ]
+
+
 def _select_variants_for_changes(
     variants: list[dict[str, Any]], changed_files: list[str]
 ) -> list[dict[str, Any]]:
@@ -1799,6 +1829,22 @@ def main(argv: Optional[list[str]] = None) -> None:
         help="Also recreate releases/v<version>_<name>.zip",
     )
     parser.add_argument(
+        "--targets",
+        action="append",
+        default=[],
+        metavar="CHIP",
+        help=("With board 'all', only build these chips (comma separated or repeated), "
+              "for example esp32s3"),
+    )
+    parser.add_argument(
+        "--boards",
+        action="append",
+        default=[],
+        metavar="DIR",
+        help=("With board 'all', only build these board directories (comma separated or "
+              "repeated), for example m5stack/core-s3"),
+    )
+    parser.add_argument(
         "--select-changed",
         action="store_true",
         help="Read changed paths from stdin and output the affected variants as JSON",
@@ -1930,10 +1976,33 @@ def main(argv: Optional[list[str]] = None) -> None:
         print(f"[ERROR] board_type {board_type_input} not found in main/CMakeLists.txt", file=sys.stderr)
         sys.exit(1)
 
+    targets = _split_filter_values(args.targets)
+    boards = _split_filter_values(args.boards)
+    if (targets or boards) and board_type_input != "all":
+        parser.error("--targets/--boards can only be used with board 'all'")
+
     variants_all = _collect_variants(config_filename=args.config, idf_version=idf_version)
 
+    if targets:
+        known_targets = {variant.get("target") for variant in variants_all}
+        unknown_targets = [target for target in targets if target not in known_targets]
+        if unknown_targets:
+            parser.error(
+                f"unknown target(s): {', '.join(unknown_targets)}; "
+                f"known targets: {', '.join(sorted(known_targets))}"
+            )
+    if boards:
+        known_boards = {variant["board"] for variant in variants_all}
+        unknown_boards = [board for board in boards if board not in known_boards]
+        if unknown_boards:
+            parser.error(
+                f"unknown board directory(ies): {', '.join(unknown_boards)}"
+            )
+
     if board_type_input == "all":
-        selected_variants = variants_all
+        selected_variants = _filter_variants(variants_all, targets, boards)
+        if not selected_variants:
+            parser.error("--targets/--boards matched no variants")
     else:
         if name_filter is None:
             name_filter = _select_variant(board_type_input, variants_all)

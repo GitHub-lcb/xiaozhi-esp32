@@ -62,6 +62,22 @@ class ReleaseTests(unittest.TestCase):
             with self.subTest(version=version, sha=sha, sdk=sdk), self.assertRaises(ValueError):
                 release.create_manifest(version, sha, sdk)
 
+    def test_selection_narrows_the_manifest(self):
+        manifest = release.create_manifest("2.5.2", "a" * 40, (6, 1, 0),
+                                           targets=["esp32s3"])
+        self.assertTrue(manifest["variants"])
+        self.assertEqual({v["target"] for v in manifest["variants"]}, {"esp32s3"})
+        self.assertEqual(manifest["firmware_count"], len(manifest["variants"]))
+        self.assertEqual(manifest["selection"]["targets"], ["esp32s3"])
+
+    def test_unknown_selection_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unknown release target"):
+            release.create_manifest("2.5.2", "a" * 40, (6, 1, 0),
+                                    targets=["esp32nope"])
+        with self.assertRaisesRegex(ValueError, "Unknown release board"):
+            release.create_manifest("2.5.2", "a" * 40, (6, 1, 0),
+                                    boards=["nope/nope"])
+
     def test_verified_package_has_a_reproducible_checksum(self):
         with tempfile.TemporaryDirectory() as folder:
             path = self.package(folder)

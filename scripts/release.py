@@ -65,7 +65,7 @@ def preflight(repository, manifest):
     return release
 
 
-def create_manifest(version, source_sha, idf_version):
+def create_manifest(version, source_sha, idf_version, targets=None, boards=None):
     if not version or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("PROJECT_VER must be a numeric x.y.z release version")
     if not re.fullmatch(r"[a-f0-9]{40}", source_sha):
@@ -73,6 +73,15 @@ def create_manifest(version, source_sha, idf_version):
     if idf_version < (6, 1, 0):
         raise ValueError("Full releases require ESP-IDF 6.1 or later")
     variants = build._collect_variants(idf_version=idf_version)
+    targets = list(targets or ())
+    boards = list(boards or ())
+    unknown_targets = sorted(set(targets) - {v["target"] for v in variants})
+    if unknown_targets:
+        raise ValueError(f"Unknown release target(s): {', '.join(unknown_targets)}")
+    unknown_boards = sorted(set(boards) - {v["board"] for v in variants})
+    if unknown_boards:
+        raise ValueError(f"Unknown release board directory(ies): {', '.join(unknown_boards)}")
+    variants = build._filter_variants(variants, targets, boards)
     if not variants or len(variants) > 256:
         raise ValueError("Release matrix must contain between 1 and 256 variants")
     matrix = [{key: v[key] for key in ("board", "name", "full_name", "target")}
@@ -83,6 +92,7 @@ def create_manifest(version, source_sha, idf_version):
         "tag": f"v{version}",
         "source_sha": source_sha,
         "idf_version": ".".join(map(str, idf_version)),
+        "selection": {"targets": targets, "boards": boards},
         "board_count": len({v["board"] for v in matrix}),
         "firmware_count": len(matrix),
         "variants": matrix,
@@ -223,6 +233,20 @@ def main():
     prepare.add_argument("--source-sha", required=True)
     prepare.add_argument("--output-dir", type=Path, required=True)
     prepare.add_argument("--repository")
+    prepare.add_argument(
+        "--targets",
+        action="append",
+        default=[],
+        metavar="CHIP",
+        help="Only release these chips (comma separated or repeated), e.g. esp32s3",
+    )
+    prepare.add_argument(
+        "--boards",
+        action="append",
+        default=[],
+        metavar="DIR",
+        help="Only release these board directories (comma separated or repeated)",
+    )
     release = sub.add_parser("publish")
     release.add_argument("--manifest", type=Path, required=True)
     release.add_argument("--assets-dir", type=Path, required=True)
@@ -233,7 +257,9 @@ def main():
     args = parser.parse_args()
     if args.command == "prepare":
         manifest = create_manifest(build.get_project_version(), args.source_sha,
-                                   tuple(map(int, args.idf_version.split("."))))
+                                   tuple(map(int, args.idf_version.split("."))),
+                                   targets=build._split_filter_values(args.targets),
+                                   boards=build._split_filter_values(args.boards))
         if args.repository:
             preflight(args.repository, manifest)
         args.output_dir.mkdir(parents=True, exist_ok=True)
