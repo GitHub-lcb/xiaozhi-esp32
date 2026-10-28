@@ -1,0 +1,67 @@
+name: Build One Board
+
+# Fork helper: build exactly one board variant and keep the resulting firmware
+# as a downloadable artifact. It never creates a tag or a release, so it is the
+# quickest way to get a flashable bin without installing ESP-IDF locally.
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: Board directory under main/boards, for example bread-compact-wifi
+        type: string
+        required: true
+        default: bread-compact-wifi
+      name:
+        description: Variant name from that board config.json builds[].name
+        type: string
+        required: true
+        default: bread-compact-wifi
+      language:
+        description: UI locale such as zh-CN or en-US; empty keeps the build default
+        type: string
+        required: false
+        default: zh-CN
+      wake_word:
+        description: Wake-word model or alias (nihaoxiaozhi, wn9_xxx, disabled); empty derives it from the language
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v6.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build single variant
+        shell: bash
+        env:
+          BOARD: ${{ inputs.board }}
+          VARIANT: ${{ inputs.name }}
+          LANGUAGE: ${{ inputs.language }}
+          WAKE_WORD: ${{ inputs.wake_word }}
+        run: |
+          source "$IDF_PATH/export.sh"
+          idf.py --version
+          OPTIONS=()
+          if [[ -n "$LANGUAGE" ]]; then OPTIONS+=(--language "$LANGUAGE"); fi
+          if [[ -n "$WAKE_WORD" ]]; then OPTIONS+=(--wake-word "$WAKE_WORD"); fi
+          python scripts/build.py "$BOARD" --name "$VARIANT" "${OPTIONS[@]}"
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: xiaozhi_${{ inputs.name }}_${{ github.sha }}
+          path: |
+            build/merged-binary.bin
+            build/xiaozhi.bin
+          if-no-files-found: error
+          overwrite: true
