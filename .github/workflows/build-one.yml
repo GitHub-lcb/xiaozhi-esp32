@@ -1,8 +1,11 @@
 name: Build One Board
 
-# Fork helper: build exactly one board variant and keep the resulting firmware
-# as a downloadable artifact. It never creates a tag or a release, so it is the
-# quickest way to get a flashable bin without installing ESP-IDF locally.
+# Fork helper: build exactly one board variant and keep the firmware as a
+# downloadable artifact. No tag, no release, no release manifest.
+#
+# Runs automatically on every push to main that touches firmware inputs, and on
+# demand for any other board/variant. The auto run always builds the defaults
+# below; workflow_dispatch overrides them.
 
 on:
   workflow_dispatch:
@@ -27,13 +30,28 @@ on:
         type: string
         required: false
         default: ''
+  push:
+    branches:
+      - main
+    paths:
+      - 'main/**'
+      - 'CMakeLists.txt'
+      - 'sdkconfig.defaults*'
+      - 'partitions/**'
+      - 'scripts/**'
+      - '.github/workflows/build-one.yml'
 
 permissions:
   contents: read
 
+# A newer push supersedes the in-flight build for the same branch.
+concurrency:
+  group: build-one-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build ${{ inputs.name }}
+    name: Build ${{ inputs.name || 'bread-compact-wifi' }}
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:release-v6.1
@@ -51,6 +69,12 @@ jobs:
         run: |
           source "$IDF_PATH/export.sh"
           idf.py --version
+          # workflow_dispatch supplies the values; a push run falls back to the
+          # fork's own board so the firmware is rebuilt without any clicking.
+          BOARD="${BOARD:-bread-compact-wifi}"
+          VARIANT="${VARIANT:-bread-compact-wifi}"
+          LANGUAGE="${LANGUAGE:-zh-CN}"
+          echo "board=$BOARD variant=$VARIANT language=$LANGUAGE wake_word=$WAKE_WORD"
           OPTIONS=()
           if [[ -n "$LANGUAGE" ]]; then OPTIONS+=(--language "$LANGUAGE"); fi
           if [[ -n "$WAKE_WORD" ]]; then OPTIONS+=(--wake-word "$WAKE_WORD"); fi
@@ -59,7 +83,7 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: xiaozhi_${{ inputs.name }}_${{ github.sha }}
+          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi' }}_${{ github.sha }}
           path: |
             build/merged-binary.bin
             build/xiaozhi.bin
