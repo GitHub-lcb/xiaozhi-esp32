@@ -1,17 +1,14 @@
 name: Build One Board
 
-# Fork helper: build exactly one board variant, keep the firmware as a workflow
-# artifact, and refresh a rolling prerelease so the newest package always has a
-# stable download URL. It does not create version tags or a release manifest, so
+# Fork helper: build the breadboard firmware variants, keep them as workflow
+# artifacts, and refresh a rolling prerelease so the newest packages always have
+# stable download URLs. It does not create version tags or a release manifest, so
 # the official release.yml flow stays untouched.
 #
-# Runs automatically on every push to main that touches firmware inputs, and on
-# demand for any other board/variant. The auto run always builds the defaults
-# below; workflow_dispatch overrides them.
-#
-# Defaults target the breadboard build with a 240x320 ST7789 SPI panel
-# (bread-compact-wifi-lcd). The OLED breadboard, the LCD geometry variants, and
-# the emote variant stay reachable through workflow_dispatch.
+# Runs automatically on every push to main that touches firmware inputs and
+# builds two variants: the standard breadboard LCD build and the emote variant
+# (320x240 landscape animated face). workflow_dispatch can build any single
+# board/variant on demand.
 
 on:
   workflow_dispatch:
@@ -97,51 +94,102 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+  # The emote variant renders the full-screen animated face (320x240 landscape),
+  # which the standard LCD build does not. Only built on push so manual dispatch
+  # stays focused on the requested variant.
+  build-emote:
+    name: Build bread-compact-wifi-lcd-emote
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v6.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build emote variant
+        shell: bash
+        env:
+          BOARD: bread-compact-wifi-lcd
+          VARIANT: bread-compact-wifi-lcd-emote
+          LANGUAGE: zh-CN
+        run: |
+          source "$IDF_PATH/export.sh"
+          idf.py --version
+          echo "board=$BOARD variant=$VARIANT language=$LANGUAGE"
+          python scripts/build.py "$BOARD" --name "$VARIANT" --zip --language "$LANGUAGE"
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: xiaozhi_bread-compact-wifi-lcd-emote_${{ github.sha }}
+          path: |
+            build/merged-binary.bin
+            build/xiaozhi.bin
+            releases/*.zip
+          if-no-files-found: error
+          overwrite: true
+
   # Separate job so only this one holds a write token, and it never runs repo
-  # code: it just republishes the artifact produced above.
+  # code: it just republishes the artifacts produced above.
   publish:
-    name: Publish rolling firmware package
-    needs: build
+    name: Publish rolling firmware packages
+    needs:
+      - build
+      - build-emote
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download built firmware
+      - name: Download standard firmware
         uses: actions/download-artifact@v7
         with:
-          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi-lcd' }}_${{ github.sha }}
-          path: dist
+          name: xiaozhi_bread-compact-wifi-lcd_${{ github.sha }}
+          path: dist/standard
+
+      - name: Download emote firmware
+        uses: actions/download-artifact@v7
+        with:
+          name: xiaozhi_bread-compact-wifi-lcd-emote_${{ github.sha }}
+          path: dist/emote
 
       - name: Refresh rolling release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: firmware-edge
-          VARIANT: ${{ inputs.name || 'bread-compact-wifi-lcd' }}
         run: |
           set -euo pipefail
-          ZIP="$(find dist -name 'v*_*.zip' -print -quit)"
-          BIN="$(find dist -name 'merged-binary.bin' -print -quit)"
-          if [[ -z "$ZIP" || -z "$BIN" ]]; then
-            echo "firmware package was not found in the artifact:" >&2
-            find dist -type f >&2
-            exit 1
-          fi
-          PACKAGE="$(basename "$ZIP")"
-          ASSET="${VARIANT}-merged-binary.bin"
-          cp "$BIN" "$ASSET"
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" \
               --prerelease \
-              --title "Firmware edge: bread-compact-wifi-lcd (ST7789 240x320)" \
-              --notes "每次 push 自动构建并覆盖上传的面包板固件：bread-compact-wifi-lcd，ST7789 240x320（IPS），zh-CN。"
+              --title "Firmware edge: 面包板固件（标准 LCD + emote 表情版）" \
+              --notes "每次 push 自动构建并覆盖上传的面包板固件：bread-compact-wifi-lcd（标准界面）与 bread-compact-wifi-lcd-emote（320x240 表情动画版），ST7789 240x320（IPS），zh-CN。"
           fi
-          gh release upload "$RELEASE_TAG" "$ZIP" "$ASSET" --clobber
-          # Keep the newest package only: drop older versioned zips.
-          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' \
-            | grep -E '^v[0-9].*\.zip$' \
-            | grep -vxF "$PACKAGE" \
-            | while read -r stale; do
-                gh release delete-asset "$RELEASE_TAG" "$stale" --yes
-              done || true
+
+          publish_one() {
+            local dir="$1" variant="$2"
+            local zip bin asset package stale
+            zip="$(find "$dir" -name 'v*_*.zip' -print -quit)"
+            bin="$(find "$dir" -name 'merged-binary.bin' -print -quit)"
+            if [[ -z "$zip" || -z "$bin" ]]; then
+              echo "firmware package was not found in $dir:" >&2
+              find "$dir" -type f >&2
+              exit 1
+            fi
+            package="$(basename "$zip")"
+            asset="${variant}-merged-binary.bin"
+            cp "$bin" "$asset"
+            gh release upload "$RELEASE_TAG" "$zip" "$asset" --clobber
+            # Keep the newest versioned zip of this variant only.
+            gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' \
+              | grep -E "^v[0-9].*_${variant}\\.zip$" \
+              | grep -vxF "$package" \
+              | while read -r stale; do
+                  gh release delete-asset "$RELEASE_TAG" "$stale" --yes
+                done || true
+          }
+
+          publish_one dist/standard bread-compact-wifi-lcd
+          publish_one dist/emote bread-compact-wifi-lcd-emote
