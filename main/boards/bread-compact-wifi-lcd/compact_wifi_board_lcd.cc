@@ -116,6 +116,8 @@ private:
         esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
         esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
         esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+        // EmoteDisplay（表情版）自己不负责开屏；缺了这句会出现背光亮但屏幕空白。
+        esp_lcd_panel_disp_on_off(panel, true);
 #ifdef  LCD_TYPE_GC9A01_SERIAL
         panel_config.vendor_config = &gc9107_vendor_config;
 #endif
