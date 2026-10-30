@@ -1,11 +1,17 @@
 name: Build One Board
 
-# Fork helper: build exactly one board variant and keep the firmware as a
-# downloadable artifact. No tag, no release, no release manifest.
+# Fork helper: build exactly one board variant, keep the firmware as a workflow
+# artifact, and refresh a rolling prerelease so the newest package always has a
+# stable download URL. It does not create version tags or a release manifest, so
+# the official release.yml flow stays untouched.
 #
 # Runs automatically on every push to main that touches firmware inputs, and on
 # demand for any other board/variant. The auto run always builds the defaults
 # below; workflow_dispatch overrides them.
+#
+# Defaults target the breadboard build with a 240x320 ST7789 SPI panel
+# (bread-compact-wifi-lcd). The OLED breadboard, the LCD geometry variants, and
+# the emote variant stay reachable through workflow_dispatch.
 
 on:
   workflow_dispatch:
@@ -14,12 +20,12 @@ on:
         description: Board directory under main/boards, for example bread-compact-wifi-lcd
         type: string
         required: true
-        default: bread-compact-wifi
+        default: bread-compact-wifi-lcd
       name:
         description: Variant name from that board config.json builds[].name
         type: string
         required: true
-        default: bread-compact-wifi
+        default: bread-compact-wifi-lcd
       language:
         description: UI locale such as zh-CN or en-US; empty keeps the build default
         type: string
@@ -51,7 +57,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build ${{ inputs.name || 'bread-compact-wifi' }}
+    name: Build ${{ inputs.name || 'bread-compact-wifi-lcd' }}
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:release-v6.1
@@ -71,21 +77,71 @@ jobs:
           idf.py --version
           # workflow_dispatch supplies the values; a push run falls back to the
           # fork's own target so the firmware is rebuilt without any clicking.
-          BOARD="${BOARD:-bread-compact-wifi}"
-          VARIANT="${VARIANT:-bread-compact-wifi}"
+          BOARD="${BOARD:-bread-compact-wifi-lcd}"
+          VARIANT="${VARIANT:-bread-compact-wifi-lcd}"
           LANGUAGE="${LANGUAGE:-zh-CN}"
           echo "board=$BOARD variant=$VARIANT language=$LANGUAGE wake_word=$WAKE_WORD"
           OPTIONS=()
           if [[ -n "$LANGUAGE" ]]; then OPTIONS+=(--language "$LANGUAGE"); fi
           if [[ -n "$WAKE_WORD" ]]; then OPTIONS+=(--wake-word "$WAKE_WORD"); fi
-          python scripts/build.py "$BOARD" --name "$VARIANT" "${OPTIONS[@]}"
+          python scripts/build.py "$BOARD" --name "$VARIANT" --zip "${OPTIONS[@]}"
 
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi' }}_${{ github.sha }}
+          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi-lcd' }}_${{ github.sha }}
           path: |
             build/merged-binary.bin
             build/xiaozhi.bin
+            releases/*.zip
           if-no-files-found: error
           overwrite: true
+
+  # Separate job so only this one holds a write token, and it never runs repo
+  # code: it just republishes the artifact produced above.
+  publish:
+    name: Publish rolling firmware package
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built firmware
+        uses: actions/download-artifact@v7
+        with:
+          name: xiaozhi_${{ inputs.name || 'bread-compact-wifi-lcd' }}_${{ github.sha }}
+          path: dist
+
+      - name: Refresh rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: firmware-edge
+          VARIANT: ${{ inputs.name || 'bread-compact-wifi-lcd' }}
+        run: |
+          set -euo pipefail
+          ZIP="$(find dist -name 'v*_*.zip' -print -quit)"
+          BIN="$(find dist -name 'merged-binary.bin' -print -quit)"
+          if [[ -z "$ZIP" || -z "$BIN" ]]; then
+            echo "firmware package was not found in the artifact:" >&2
+            find dist -type f >&2
+            exit 1
+          fi
+          PACKAGE="$(basename "$ZIP")"
+          ASSET="${VARIANT}-merged-binary.bin"
+          cp "$BIN" "$ASSET"
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --prerelease \
+              --title "Firmware edge: bread-compact-wifi-lcd (ST7789 240x320)" \
+              --notes "每次 push 自动构建并覆盖上传的面包板固件：bread-compact-wifi-lcd，ST7789 240x320（IPS），zh-CN。"
+          fi
+          gh release upload "$RELEASE_TAG" "$ZIP" "$ASSET" --clobber
+          # Keep the newest package only: drop older versioned zips.
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' \
+            | grep -E '^v[0-9].*\.zip$' \
+            | grep -vxF "$PACKAGE" \
+            | while read -r stale; do
+                gh release delete-asset "$RELEASE_TAG" "$stale" --yes
+              done || true
