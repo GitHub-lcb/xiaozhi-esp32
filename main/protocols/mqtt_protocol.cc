@@ -150,10 +150,16 @@ bool MqttProtocol::StartMqttClient(bool report_error) {
 
     std::string broker_address;
     int broker_port = 8883;
-    size_t pos = endpoint.find(':');
+    // 兼容 mqtt:// 等协议前缀：剥掉协议再拆 host:port
+    std::string host_and_port = endpoint;
+    auto scheme_pos = endpoint.find("://");
+    if (scheme_pos != std::string::npos) {
+        host_and_port = endpoint.substr(scheme_pos + 3);
+    }
+    size_t pos = host_and_port.rfind(':');
     if (pos != std::string::npos) {
-        broker_address = endpoint.substr(0, pos);
-        auto port_str = endpoint.substr(pos + 1);
+        broker_address = host_and_port.substr(0, pos);
+        auto port_str = host_and_port.substr(pos + 1);
         int parsed_port = 0;
         auto [ptr, ec] =
             std::from_chars(port_str.data(), port_str.data() + port_str.size(), parsed_port);
