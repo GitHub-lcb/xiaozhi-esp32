@@ -273,7 +273,8 @@
 #ifdef CONFIG_LCD_CUSTOM
 #define DISPLAY_WIDTH   320
 #define DISPLAY_HEIGHT  240
-#define DISPLAY_MIRROR_X false
+// 240x320 面板旋转 90 度成横屏：swap_xy 之外还必须 MIRROR_X，否则整屏文字/画面左右镜像
+#define DISPLAY_MIRROR_X true
 #define DISPLAY_MIRROR_Y false
 #define DISPLAY_SWAP_XY true
 #define DISPLAY_INVERT_COLOR    true
