@@ -1208,6 +1208,40 @@ class BuildOptionTests(unittest.TestCase):
         sdkconfig = build._build_options_sdkconfig(definitions, normalized, {})
         self.assertIn("CONFIG_LCD_CUSTOM=n", sdkconfig)
 
+    def test_lcd_custom_preset_hides_display_model_option(self):
+        config = json.loads(
+            (ROOT / "main/boards/bread-compact-wifi-lcd/config.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        build_config = next(
+            item
+            for item in config["builds"]
+            if item["name"] == "bread-compact-wifi-lcd-emote"
+        )
+        board_config = build._resolve_board_config(
+            "bread-compact-wifi-lcd",
+            config["target"],
+            build_config["sdkconfig_append"],
+            variant_name=build_config["name"],
+        )
+        definitions = build._build_option_definitions(
+            "bread-compact-wifi-lcd",
+            config["target"],
+            board_config,
+            build_config,
+        )
+
+        # LCD_CUSTOM reads its geometry from config.h, so the preset must not
+        # offer a panel selector that would silently rewrite the panel setup.
+        self.assertNotIn(
+            "display_model",
+            {definition["key"] for definition in definitions},
+        )
+        normalized = build._normalize_build_options(definitions, {})
+        sdkconfig = build._build_options_sdkconfig(definitions, normalized, {})
+        self.assertNotIn("CONFIG_LCD_CUSTOM", sdkconfig)
+
     def test_bread_compact_esp32_config_supports_sh1106(self):
         config_header = (
             ROOT / "main/boards/bread-compact-esp32/config.h"

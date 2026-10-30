@@ -527,11 +527,19 @@ def _build_option_definitions(
         choice = _kconfig_choice(choice_name)
         if board_config not in choice["board_configs"]:
             continue
+        selected_panel = _selected_choice_default(choice, assignments)
+        if selected_panel == "LCD_CUSTOM":
+            # LCD_CUSTOM carries no generic geometry: its panel parameters live
+            # in the board config.h. Presets that select it (for example the
+            # bread-compact-wifi-lcd emote variant) must keep that source-level
+            # choice, so the option is not exposed for them and callers cannot
+            # rewrite it from the build options.
+            break
         entries = [entry for entry in choice["entries"] if entry["value"] != "LCD_CUSTOM"]
         definitions.append({
             "key": "display_model",
             "type": "select",
-            "default": _selected_choice_default(choice, assignments),
+            "default": selected_panel,
             "choices": entries,
         })
         break
