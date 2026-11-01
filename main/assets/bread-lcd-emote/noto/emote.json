@@ -1,0 +1,134 @@
+[
+    {
+        "emote": "happy",
+        "src": "color_happy.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "laughing",
+        "src": "color_laughing.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "funny",
+        "src": "color_funny.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "loving",
+        "src": "color_loving.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "embarrassed",
+        "src": "color_embarrassed.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "confident",
+        "src": "color_confident.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "delicious",
+        "src": "color_delicious.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "sad",
+        "src": "color_sad.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "crying",
+        "src": "color_crying.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "sleepy",
+        "src": "color_sleepy.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "silly",
+        "src": "color_silly.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "angry",
+        "src": "color_angry.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "surprised",
+        "src": "color_surprised.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "shocked",
+        "src": "color_shocked.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "thinking",
+        "src": "color_thinking.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "winking",
+        "src": "color_winking.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "relaxed",
+        "src": "color_relaxed.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "confused",
+        "src": "color_confused.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "neutral",
+        "src": "color_neutral.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "kissy",
+        "src": "color_kissy.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "cool",
+        "src": "color_cool.eaf",
+        "loop": true,
+        "fps": 20
+    },
+    {
+        "emote": "idle",
+        "src": "color_neutral.eaf",
+        "loop": true,
+        "fps": 20
+    }
+]

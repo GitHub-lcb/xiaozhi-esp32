@@ -841,6 +841,22 @@ choice DISPLAY_LCD_TYPE
         bool "Custom LCD (自定义屏幕参数)"
 endchoice
 
+choice BREAD_LCD_EMOJI_SET
+    depends on BOARD_TYPE_BREAD_COMPACT_WIFI_LCD
+    prompt "Bread LCD emote emoji set"
+    default BREAD_LCD_EMOJI_SET_NOTO
+    help
+        Colorful emoji asset set used by the emote-style LCD UI.
+    config BREAD_LCD_EMOJI_SET_NOTO
+        bool "Noto Color Emoji (classic)"
+    config BREAD_LCD_EMOJI_SET_FLUENT3D
+        bool "Microsoft Fluent 3D emoji"
+    config BREAD_LCD_EMOJI_SET_OPENMOJI
+        bool "OpenMoji (flat color)"
+    config BREAD_LCD_EMOJI_SET_ORIGINAL
+        bool "XiaoZhi 原创卡通"
+endchoice
+
 choice WK_BOARD_TYPE
     depends on BOARD_TYPE_WK_ESP32S3_DEV
     prompt "BOARD_TYPE_WK_ESP32S3_DEV"

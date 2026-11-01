@@ -1295,6 +1295,56 @@ if(CONFIG_BOARD_TYPE_ESP_VOCAT OR CONFIG_BOARD_TYPE_CYBERAI_VOCAT_V2_0 OR CONFIG
     endif()
 endif()
 
+# 面包板 LCD（emote 变体）使用板级自定义彩色表情资源：
+# 按 Kconfig 选择表情风格集，把对应资源与组件图标汇总到 staging，再交给 emote 资源打包脚本。
+if(CONFIG_BOARD_TYPE_BREAD_COMPACT_WIFI_LCD AND CONFIG_FLASH_EXPRESSION_ASSETS)
+    find_component_by_pattern("esp_emote_assets" EMOTE_ASSETS_COMPONENT EMOTE_ASSETS_PATH)
+    if(EMOTE_ASSETS_PATH)
+        if(CONFIG_BREAD_LCD_EMOJI_SET_FLUENT3D)
+            set(BREAD_LCD_EMOJI_SET "fluent3d")
+            set(BREAD_LCD_EMOJI_COLLECTION "emoji_fluent3d")
+        elseif(CONFIG_BREAD_LCD_EMOJI_SET_OPENMOJI)
+            set(BREAD_LCD_EMOJI_SET "openmoji")
+            set(BREAD_LCD_EMOJI_COLLECTION "emoji_openmoji")
+        elseif(CONFIG_BREAD_LCD_EMOJI_SET_ORIGINAL)
+            set(BREAD_LCD_EMOJI_SET "original")
+            set(BREAD_LCD_EMOJI_COLLECTION "emoji_original")
+        else()
+            set(BREAD_LCD_EMOJI_SET "noto")
+            set(BREAD_LCD_EMOJI_COLLECTION "emoji_color")
+        endif()
+        set(BREAD_LCD_ASSETS_STAGING "${CMAKE_BINARY_DIR}/bread-lcd-assets")
+        set(BREAD_LCD_EMOJI_SRC "${CMAKE_CURRENT_SOURCE_DIR}/assets/bread-lcd-emote/${BREAD_LCD_EMOJI_SET}")
+        file(REMOVE_RECURSE "${BREAD_LCD_ASSETS_STAGING}")
+        file(MAKE_DIRECTORY "${BREAD_LCD_ASSETS_STAGING}/320_240")
+        file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/assets/bread-lcd-emote/layout.json"
+             DESTINATION "${BREAD_LCD_ASSETS_STAGING}/320_240")
+        file(COPY "${BREAD_LCD_EMOJI_SRC}/config.json" "${BREAD_LCD_EMOJI_SRC}/emote.json"
+             DESTINATION "${BREAD_LCD_ASSETS_STAGING}/320_240")
+        file(COPY "${BREAD_LCD_EMOJI_SRC}/${BREAD_LCD_EMOJI_COLLECTION}/"
+             DESTINATION "${BREAD_LCD_ASSETS_STAGING}/${BREAD_LCD_EMOJI_COLLECTION}")
+        file(COPY
+            "${EMOTE_ASSETS_PATH}/emoji_large/icon_mic.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/icon_speaker.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/icon_tips.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/icon_wifi_ok.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/icon_WiFi_fail.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/battery_bg.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/battery_charge.bin"
+            "${EMOTE_ASSETS_PATH}/emoji_large/listen.eaf"
+            DESTINATION "${BREAD_LCD_ASSETS_STAGING}/${BREAD_LCD_EMOJI_COLLECTION}")
+        set(EMOTE_EXTERNAL_PATH "${BREAD_LCD_ASSETS_STAGING}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets/bread-lcd-emote/layout.json"
+            "${BREAD_LCD_EMOJI_SRC}/config.json"
+            "${BREAD_LCD_EMOJI_SRC}/emote.json"
+        )
+        message(STATUS "Bread LCD emote assets staging (set=${BREAD_LCD_EMOJI_SET}): ${BREAD_LCD_ASSETS_STAGING}")
+    else()
+        message(WARNING "esp_emote_assets component not found; colorful emote assets skipped")
+    endif()
+endif()
+
 if(CONFIG_BOARD_TYPE_ESP_HI)
 # Pin AAF assets to a fixed image_player commit so builds stay reproducible.
 # Only pack AAF files referenced by emoji_display.cc — the full test_8bit set

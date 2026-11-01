@@ -273,11 +273,12 @@
 #ifdef CONFIG_LCD_CUSTOM
 #define DISPLAY_WIDTH   320
 #define DISPLAY_HEIGHT  240
-// 240x320 面板旋转 90 度成横屏：swap_xy 之外还必须 MIRROR_X，否则整屏文字/画面左右镜像
+// 240x320 面板旋转 90° 成横屏：MADCTL 0x60（MV|MX），经实物探针逐项验证为正确方向
 #define DISPLAY_MIRROR_X true
 #define DISPLAY_MIRROR_Y false
 #define DISPLAY_SWAP_XY true
-#define DISPLAY_INVERT_COLOR    true
+// emote 表情主题是深色（黑底白字），本面板不能再反相，否则整屏颜色反相
+#define DISPLAY_INVERT_COLOR    false
 #define DISPLAY_RGB_ORDER  LCD_RGB_ELEMENT_ORDER_RGB
 #define DISPLAY_OFFSET_X  0
 #define DISPLAY_OFFSET_Y  0

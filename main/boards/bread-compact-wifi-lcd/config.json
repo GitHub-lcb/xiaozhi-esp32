@@ -25,7 +25,35 @@
             "sdkconfig_append": [
                 "CONFIG_LCD_CUSTOM=y",
                 "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
-                "CONFIG_MMAP_FILE_NAME_LENGTH=32"
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32",
+                "CONFIG_BREAD_LCD_EMOJI_SET_NOTO=y"
+            ]
+        },
+        {
+            "name": "bread-compact-wifi-lcd-emote-fluent3d",
+            "sdkconfig_append": [
+                "CONFIG_LCD_CUSTOM=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32",
+                "CONFIG_BREAD_LCD_EMOJI_SET_FLUENT3D=y"
+            ]
+        },
+        {
+            "name": "bread-compact-wifi-lcd-emote-openmoji",
+            "sdkconfig_append": [
+                "CONFIG_LCD_CUSTOM=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32",
+                "CONFIG_BREAD_LCD_EMOJI_SET_OPENMOJI=y"
+            ]
+        },
+        {
+            "name": "bread-compact-wifi-lcd-emote-original",
+            "sdkconfig_append": [
+                "CONFIG_LCD_CUSTOM=y",
+                "CONFIG_USE_EMOTE_MESSAGE_STYLE=y",
+                "CONFIG_MMAP_FILE_NAME_LENGTH=32",
+                "CONFIG_BREAD_LCD_EMOJI_SET_ORIGINAL=y"
             ]
         }
     ]
