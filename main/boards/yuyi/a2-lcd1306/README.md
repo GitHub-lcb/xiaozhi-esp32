@@ -28,6 +28,14 @@ python scripts/build.py yuyi/a2-lcd1306 --name yuyi-a2-lcd1306
 
 烧录前确认 `sdkconfig` 中 `CONFIG_BOARD_TYPE_YUYI_A2_LCD1306=y`。
 
+## 后端地址（OTA）
+
+- 默认 OTA 地址：`https://ai.lichenbo.cn/api/device/ota`
+- 来源：`main/Kconfig.projbuild` 中 `config OTA_URL` 的默认值（提交 `71a87fe`，2026-10-28 改为自建服务）
+- 设备联网后先请求该地址，由服务端响应下发 WebSocket/MQTT 连接信息与验证码，因此语音后端最终连哪里由 OTA 服务决定
+- 如需修改：改 Kconfig 默认值（全局），或在本板 `config.json` 的 `sdkconfig_append` 中加入
+  `"CONFIG_OTA_URL=\"https://新地址/api/device/ota\""`（仅本板生效）
+
 ## 备注
 
 - 电池为 1:2 分压，电量按 3.0V–4.2V 折算。
